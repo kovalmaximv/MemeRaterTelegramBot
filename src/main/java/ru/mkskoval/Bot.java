@@ -13,7 +13,7 @@ import java.util.List;
 public class Bot extends TelegramLongPollingBot {
 
     public Bot() {
-        super("5829529159:AAHeCq1tekKRZBesTJ6kKzx9QV79OXl9y6M");
+        super("5829529159:AAHS0GT2GTREevegIUdyPiXjaW7U0im-tcs"); // this token was revoked :)
         //super(System.getenv("botToken"));
     }
 

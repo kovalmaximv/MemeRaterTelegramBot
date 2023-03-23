@@ -1,14 +1,13 @@
 package ru.mkskoval;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
+import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-
-import java.util.List;
 
 public class Bot extends TelegramLongPollingBot {
 
@@ -24,51 +23,87 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasCallbackQuery()) {
+        if (update.hasMessage()) {
+            Message message = update.getMessage();
+            if (message.hasPhoto()) {
+                memeWasSent(message);
+            }
+        } else if (update.hasCallbackQuery()) {
             CallbackQuery callbackQuery = update.getCallbackQuery();
-
-            var user = callbackQuery.getFrom();
-            sendText(user.getId(), callbackQuery.getData() + "was pressed");
-        } else if (update.hasMessage()) {
-            var msg = update.getMessage();
-            var user = msg.getFrom();
-            var id = user.getId();
-
-            var like = InlineKeyboardButton.builder()
-                    .text("\uD83D\uDC4D")
-                    .callbackData("like")
-                    .build();
-
-            var dislike = InlineKeyboardButton.builder()
-                    .text("\uD83D\uDC4E")
-                    .callbackData("dislike")
-                    .build();
-
-            var keyboard = InlineKeyboardMarkup.builder()
-                    .keyboardRow(List.of(like, dislike)).build();
-            sendTextWithMenu(id, msg.getText(), keyboard);
+            if(callbackQuery.getData().equals("like")) {
+                Message message = callbackQuery.getMessage();
+                editKeyboard(message.getMessageId(), message.getChatId(), 1, 1, 1);
+                sendCallbackAnswer(callbackQuery);
+            }
         }
     }
 
-    private void sendTextWithMenu(Long who, String what, InlineKeyboardMarkup kb){
-        SendMessage sm = SendMessage.builder().chatId(who.toString())
-                .parseMode("HTML").text(what)
-                .replyMarkup(kb).build();
-        try {
-            execute(sm);                        //Actually sending the message
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);      //Any error will be printed here
-        }
+    private void memeWasSent(Message message) {
+        User user = message.getFrom();
+        Chat chat = message.getChat();
+        String fileId  = message.getPhoto().get(0).getFileId();
+
+        sendMeme(chat, user, fileId);
+        deleteMessage(message.getMessageId(), message.getChatId());
     }
 
-    private void sendText(Long who, String what){
-        SendMessage sm = SendMessage.builder().chatId(who.toString())
-                .parseMode("HTML").text(what)
+    private void deleteMessage(Integer messageId, Long chatId) {
+        DeleteMessage deleteMessage = DeleteMessage
+                .builder()
+                .messageId(messageId)
+                .chatId(chatId)
                 .build();
+
         try {
-            execute(sm);                        //Actually sending the message
+            execute(deleteMessage);
         } catch (TelegramApiException e) {
-            throw new RuntimeException(e);      //Any error will be printed here
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void sendMeme(Chat chat, User from, String fileId) {
+        String caption = String.format("[От %s %s](tg://user?id=%d)",
+                from.getFirstName(), from.getLastName(), from.getId());
+
+        SendPhoto msg = SendPhoto.builder()
+                .chatId(chat.getId())
+                .photo(new InputFile(fileId))
+                .parseMode("Markdown")
+                .caption(caption)
+                .replyMarkup(Buttons.getScoreBar(0, 0, 0))
+                .build();
+
+        try {
+            execute(msg);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void sendCallbackAnswer(CallbackQuery callbackQuery) {
+        AnswerCallbackQuery answerCallbackQuery = AnswerCallbackQuery.builder()
+                .callbackQueryId(callbackQuery.getId())
+                .text("Liked")
+                .build();
+
+        try {
+            execute(answerCallbackQuery);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void editKeyboard(Integer messageId, Long chatId, int likes, int dislikes, int accordions) {
+        EditMessageReplyMarkup editMessageReplyMarkup = EditMessageReplyMarkup.builder()
+                .messageId(messageId)
+                .chatId(chatId)
+                .replyMarkup(Buttons.getScoreBar(likes, accordions, dislikes))
+                .build();
+
+        try {
+            execute(editMessageReplyMarkup);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
         }
     }
 

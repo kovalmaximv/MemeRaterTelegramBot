@@ -7,11 +7,13 @@ import java.time.LocalDate;
 
 @Entity
 @Data
+@IdClass(MemeID.class)
 public class Meme {
     @Id
     private Long messageId;
 
-    // добавить второй ключ chatId
+    @Id
+    private Long chatId;
 
     @Column(nullable = false)
     private Integer likes;

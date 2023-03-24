@@ -12,7 +12,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 public class Bot extends TelegramLongPollingBot {
 
     public Bot() {
-        super("5829529159:AAHS0GT2GTREevegIUdyPiXjaW7U0im-tcs"); // this token was revoked :)
+        super("5829529159:AAFT3H64I6UhLNrHB6P__IGFLD11mazr4No"); // this token was revoked :)
         //super(System.getenv("botToken"));
     }
 

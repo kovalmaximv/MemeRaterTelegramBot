@@ -3,33 +3,48 @@ package ru.mkskoval.repository;
 import jakarta.persistence.*;
 import lombok.extern.slf4j.Slf4j;
 import ru.mkskoval.entity.Meme;
+import ru.mkskoval.entity.MemeScore;
+import ru.mkskoval.entity.MemeScoreID;
 import ru.mkskoval.enums.ScoreMemeAction;
 
 @Slf4j
 public class MemeRepository {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private static final EntityManagerFactory emf;
+
+    static {
+        emf = Persistence.createEntityManagerFactory("pers-unit");
+    }
+
+    public static EntityManager getEntityManager() {
+        return emf.createEntityManager();
+    }
 
 
     public void createMeme(Meme meme) {
-        entityManager.persist(meme);
-        entityManager.flush();
+        EntityManager em = MemeRepository.getEntityManager();
+
+        em.persist(meme);
+        em.flush();
     }
 
-    public void scoreMeme(ScoreMemeAction scoreMemeAction, Long messageId) {
+    public void scoreMeme(ScoreMemeAction scoreMemeAction, Long messageId, Long chatId, Long userId) {
+        EntityManager em = MemeRepository.getEntityManager();
         try {
-            TypedQuery<Meme> tq = entityManager.createQuery("from Meme WHERE messageId=?", Meme.class);
-            Meme meme = tq.setParameter(1, messageId).getSingleResult();
+            Meme meme = em.createQuery("from Meme WHERE messageId=? AND chatId", Meme.class)
+                    .setParameter(1, messageId)
+                    .setParameter(2, chatId)
+                    .getSingleResult();
 
-            switch (scoreMemeAction) {
-                case LIKE -> meme.setLikes(meme.getLikes() + 1);
-                case DISLIKE -> meme.setDislikes(meme.getDislikes() + 1);
-                case ACCORDION -> meme.setAccordions(meme.getAccordions() + 1);
-            }
+            // ToDo if meme score already exist
 
-            entityManager.merge(meme);
-            entityManager.flush();
+            MemeScore memeScore = new MemeScore();
+            memeScore.setMeme(meme);
+            memeScore.setScore(scoreMemeAction);
+            memeScore.setUserId(userId);
+
+            em.persist(memeScore);
+            em.flush();
         } catch(NoResultException noresult) {
             log.error("Meme not found {}", messageId);
         } catch(NonUniqueResultException notUnique) {

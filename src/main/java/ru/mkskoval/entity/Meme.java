@@ -6,26 +6,26 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Entity
-@Data
 @IdClass(MemeID.class)
+@Table(
+        name="meme",
+        uniqueConstraints=
+        @UniqueConstraint(columnNames={"messageId", "chatId"})
+)
+@Data
 public class Meme {
     @Id
-    private Long messageId;
+    @GeneratedValue(strategy=GenerationType.AUTO)
+    private Long memeId;
 
-    @Id
+    @Column(nullable = false)
+    private Integer messageId;
+
+    @Column(nullable = false)
     private Long chatId;
 
-    @Column(nullable = false)
-    private Integer likes;
-
-    @Column(nullable = false)
-    private Integer dislikes;
-
-    @Column(nullable = false)
-    private Integer accordions;
-
-    @Column(nullable = false)
-    private LocalDate date;
+    //@Column(nullable = false)
+    //private LocalDate publishDate;
 
     @Column(nullable = false)
     private Long userId;

@@ -17,7 +17,7 @@ public class MemeScore {
     private Long userId;
 
     @Enumerated
-    @Column
+    @Column(nullable = false)
     private ScoreMemeAction score;
 
 }

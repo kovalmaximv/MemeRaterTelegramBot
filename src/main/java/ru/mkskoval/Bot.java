@@ -22,7 +22,7 @@ public class Bot extends TelegramLongPollingBot {
 
     public Bot() {
         super("5829529159:AAFT3H64I6UhLNrHB6P__IGFLD11mazr4No"); // this token was revoked :)
-        //super(System.getenv("botToken"));
+        // super(System.getenv("botToken"));
         memeService = new MemeService();
     }
 

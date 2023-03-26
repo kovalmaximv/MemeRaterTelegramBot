@@ -8,6 +8,7 @@ CREATE TABLE meme (
 );
 
 CREATE TYPE score_types AS ENUM ('LIKE', 'DISLIKE', 'ACCORDION');
+CREATE CAST (character varying AS score_types) WITH INOUT AS ASSIGNMENT;
 
 CREATE TABLE meme_score (
     meme_id integer NOT NULL,

@@ -7,19 +7,23 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import ru.mkskoval.dto.MemeResult;
 import ru.mkskoval.entity.Meme;
-import ru.mkskoval.repository.MemeRepository;
+import ru.mkskoval.enums.ScoreMemeAction;
+import ru.mkskoval.exceptions.MemeScoreActionRepeatException;
+import ru.mkskoval.exceptions.UserLikedOwnMemeException;
+import ru.mkskoval.service.MemeService;
 
 import java.time.LocalDate;
 
 public class Bot extends TelegramLongPollingBot {
 
-    private final MemeRepository memeRepository;
+    private final MemeService memeService;
 
     public Bot() {
         super("5829529159:AAFT3H64I6UhLNrHB6P__IGFLD11mazr4No"); // this token was revoked :)
         //super(System.getenv("botToken"));
-        memeRepository = new MemeRepository();
+        memeService = new MemeService();
     }
 
     @Override
@@ -36,11 +40,26 @@ public class Bot extends TelegramLongPollingBot {
             }
         } else if (update.hasCallbackQuery()) {
             CallbackQuery callbackQuery = update.getCallbackQuery();
-            if(callbackQuery.getData().equals("like")) {
-                Message message = callbackQuery.getMessage();
-                editKeyboard(message.getMessageId(), message.getChatId(), 1, 1, 1);
-                sendCallbackAnswer(callbackQuery);
+            ScoreMemeAction scoreMemeAction = ScoreMemeAction.byString(callbackQuery.getData());
+            User user = callbackQuery.getFrom();
+            Message message = callbackQuery.getMessage();
+
+            try {
+                memeService.scoreMeme(user.getId(), message.getMessageId(), message.getChatId(), scoreMemeAction);
+            } catch (UserLikedOwnMemeException e) {
+                sendCallbackAnswer(callbackQuery, "Вы не можете лайкать свой мем.");
+                return;
+            } catch (MemeScoreActionRepeatException e) {
+                String text = String.format("Вы уже поставили %s этому мему.", scoreMemeAction.getEmoji());
+                sendCallbackAnswer(callbackQuery, text);
+                return;
             }
+            Meme meme = memeService.getMeme(message.getMessageId(), message.getChatId());
+            MemeResult memeResult = memeService.getMemeResult(meme);
+            editKeyboard(message.getMessageId(), message.getChatId(),
+                    memeResult.getLikes(), memeResult.getDislikes(), memeResult.getAccordions());
+            String text = String.format("Вы поставили %s этому мему.", scoreMemeAction.getEmoji());
+            sendCallbackAnswer(callbackQuery, text);
         }
     }
 
@@ -51,12 +70,12 @@ public class Bot extends TelegramLongPollingBot {
 
         Meme meme = new Meme();
         meme.setChatId(chat.getId());
-        meme.setMessageId(message.getMessageId());
         meme.setUserId(user.getId());
         meme.setPublishDate(LocalDate.now());
 
-        memeRepository.createMeme(meme);
-        sendMeme(chat, user, fileId);
+        Message sentMeme = sendMeme(chat, user, fileId);
+        meme.setMessageId(sentMeme.getMessageId());
+        memeService.saveMeme(meme);
         deleteMessage(message.getMessageId(), message.getChatId());
     }
 
@@ -74,7 +93,7 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendMeme(Chat chat, User from, String fileId) {
+    private Message sendMeme(Chat chat, User from, String fileId) {
         String caption = String.format("[От %s %s](tg://user?id=%d)",
                 from.getFirstName(), from.getLastName(), from.getId());
 
@@ -87,16 +106,16 @@ public class Bot extends TelegramLongPollingBot {
                 .build();
 
         try {
-            execute(msg);
+            return execute(msg);
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void sendCallbackAnswer(CallbackQuery callbackQuery) {
+    private void sendCallbackAnswer(CallbackQuery callbackQuery, String text) {
         AnswerCallbackQuery answerCallbackQuery = AnswerCallbackQuery.builder()
                 .callbackQueryId(callbackQuery.getId())
-                .text("Liked")
+                .text(text)
                 .build();
 
         try {

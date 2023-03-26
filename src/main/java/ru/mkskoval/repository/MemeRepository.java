@@ -6,6 +6,7 @@ import ru.mkskoval.entity.MemeScore;
 import ru.mkskoval.enums.ScoreMemeAction;
 
 import javax.persistence.*;
+import java.util.List;
 
 @Slf4j
 public class MemeRepository {
@@ -21,34 +22,47 @@ public class MemeRepository {
     }
 
 
-    public void createMeme(Meme meme) {
+    public void saveMeme(Meme meme) {
         EntityManager em = MemeRepository.getEntityManager();
         em.getTransaction().begin();
         em.persist(meme);
         em.getTransaction().commit();
     }
 
-    public void scoreMeme(ScoreMemeAction scoreMemeAction, Long messageId, Long chatId, Long userId) {
+    public void saveMemeScore(MemeScore memeScore) {
         EntityManager em = MemeRepository.getEntityManager();
+        em.getTransaction().begin();
+        em.merge(memeScore);
+        em.getTransaction().commit();
+    }
+
+    public List<MemeScore> findAllMemeScoreByMeme(Meme meme) {
+        EntityManager em = MemeRepository.getEntityManager();
+        return em.createQuery("from MemeScore WHERE meme=?1", MemeScore.class)
+                .setParameter(1, meme)
+                .getResultList();
+    }
+
+    // 55, 473099866
+    public Meme findMemeByChatAndMessageIds(Integer messageId, Long chatId) {
+        EntityManager em = MemeRepository.getEntityManager();
+
+        return em.createQuery("from Meme WHERE messageId=?1 AND chatId=?2", Meme.class)
+                .setParameter(1, messageId)
+                .setParameter(2, chatId)
+                .getSingleResult();
+    }
+
+    public MemeScore findMemeScoreByUserAndMeme(Long userId, Meme meme) {
+        EntityManager em = MemeRepository.getEntityManager();
+
         try {
-            Meme meme = em.createQuery("from Meme WHERE messageId=? AND chatId", Meme.class)
-                    .setParameter(1, messageId)
-                    .setParameter(2, chatId)
+            return em.createQuery("from MemeScore WHERE meme=?1 AND userId=?2", MemeScore.class)
+                    .setParameter(1, meme)
+                    .setParameter(2, userId)
                     .getSingleResult();
-
-            // ToDo if meme score already exist
-
-            MemeScore memeScore = new MemeScore();
-            memeScore.setMeme(meme);
-            memeScore.setScore(scoreMemeAction);
-            memeScore.setUserId(userId);
-
-            em.persist(memeScore);
-            em.flush();
-        } catch(NoResultException noresult) {
-            log.error("Meme not found {}", messageId);
-        } catch(NonUniqueResultException notUnique) {
-            log.error("Found more than one meme {}", messageId);
+        } catch (NoResultException e) {
+            return null;
         }
     }
 

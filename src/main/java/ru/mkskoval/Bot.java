@@ -53,7 +53,7 @@ public class Bot extends TelegramLongPollingBot {
         meme.setChatId(chat.getId());
         meme.setMessageId(message.getMessageId());
         meme.setUserId(user.getId());
-        //meme.setPublishDate(LocalDate.now());
+        meme.setPublishDate(LocalDate.now());
 
         memeRepository.createMeme(meme);
         sendMeme(chat, user, fileId);

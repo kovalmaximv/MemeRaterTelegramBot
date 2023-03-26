@@ -1,11 +1,11 @@
 package ru.mkskoval.repository;
 
-import jakarta.persistence.*;
 import lombok.extern.slf4j.Slf4j;
 import ru.mkskoval.entity.Meme;
 import ru.mkskoval.entity.MemeScore;
-import ru.mkskoval.entity.MemeScoreID;
 import ru.mkskoval.enums.ScoreMemeAction;
+
+import javax.persistence.*;
 
 @Slf4j
 public class MemeRepository {
@@ -23,9 +23,9 @@ public class MemeRepository {
 
     public void createMeme(Meme meme) {
         EntityManager em = MemeRepository.getEntityManager();
-
+        em.getTransaction().begin();
         em.persist(meme);
-        em.flush();
+        em.getTransaction().commit();
     }
 
     public void scoreMeme(ScoreMemeAction scoreMemeAction, Long messageId, Long chatId, Long userId) {

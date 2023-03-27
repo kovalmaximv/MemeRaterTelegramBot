@@ -1,5 +1,6 @@
 package ru.mkskoval;
 
+import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
@@ -9,6 +10,7 @@ import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.mkskoval.dto.MemeResult;
 import ru.mkskoval.entity.Meme;
+import ru.mkskoval.enums.RequestType;
 import ru.mkskoval.enums.ScoreMemeAction;
 import ru.mkskoval.exceptions.MemeScoreActionRepeatException;
 import ru.mkskoval.exceptions.UserLikedOwnMemeException;
@@ -16,6 +18,9 @@ import ru.mkskoval.service.MemeService;
 
 import java.time.LocalDate;
 
+import static ru.mkskoval.RequestUtil.handleUpdate;
+
+@Slf4j
 public class Bot extends TelegramLongPollingBot {
 
     private final MemeService memeService;
@@ -33,35 +38,16 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage()) {
-            Message message = update.getMessage();
-            if (message.hasPhoto()) {
-                memeWasSent(message);
-            }
-        } else if (update.hasCallbackQuery()) {
-            CallbackQuery callbackQuery = update.getCallbackQuery();
-            ScoreMemeAction scoreMemeAction = ScoreMemeAction.byString(callbackQuery.getData());
-            User user = callbackQuery.getFrom();
-            Message message = callbackQuery.getMessage();
+        RequestType requestType = handleUpdate(update);
 
-            try {
-                memeService.scoreMeme(user.getId(), message.getMessageId(), message.getChatId(), scoreMemeAction);
-            } catch (UserLikedOwnMemeException e) {
-                sendCallbackAnswer(callbackQuery, "Вы не можете лайкать свой мем.");
-                return;
-            } catch (MemeScoreActionRepeatException e) {
-                String text = String.format("Вы уже поставили %s этому мему.", scoreMemeAction.getEmoji());
-                sendCallbackAnswer(callbackQuery, text);
-                return;
-            }
-            Meme meme = memeService.getMeme(message.getMessageId(), message.getChatId());
-            MemeResult memeResult = memeService.getMemeResult(meme);
-            editKeyboard(message.getMessageId(), message.getChatId(),
-                    memeResult.getLikes(), memeResult.getDislikes(), memeResult.getAccordions());
-            String text = String.format("Вы поставили %s этому мему.", scoreMemeAction.getEmoji());
-            sendCallbackAnswer(callbackQuery, text);
+        switch (requestType) {
+            case MEME_SENT -> memeWasSent(update.getMessage());
+            case MEME_SCORE -> memeScore(update.getCallbackQuery());
+            case UNKNOWN -> {}
         }
     }
+
+    //------- request handlers zone -------
 
     private void memeWasSent(Message message) {
         User user = message.getFrom();
@@ -78,6 +64,31 @@ public class Bot extends TelegramLongPollingBot {
         memeService.saveMeme(meme);
         deleteMessage(message.getMessageId(), message.getChatId());
     }
+
+    private void memeScore(CallbackQuery callbackQuery) {
+        ScoreMemeAction scoreMemeAction = ScoreMemeAction.byString(callbackQuery.getData());
+        User user = callbackQuery.getFrom();
+        Message message = callbackQuery.getMessage();
+
+        try {
+            memeService.scoreMeme(user.getId(), message.getMessageId(), message.getChatId(), scoreMemeAction);
+        } catch (UserLikedOwnMemeException e) {
+            sendCallbackAnswer(callbackQuery, "Вы не можете лайкать свой мем.");
+            return;
+        } catch (MemeScoreActionRepeatException e) {
+            String text = String.format("Вы уже поставили %s этому мему.", scoreMemeAction.getEmoji());
+            sendCallbackAnswer(callbackQuery, text);
+            return;
+        }
+        Meme meme = memeService.getMeme(message.getMessageId(), message.getChatId());
+        MemeResult memeResult = memeService.getMemeResult(meme);
+        editKeyboard(message.getMessageId(), message.getChatId(),
+                memeResult.getLikes(), memeResult.getDislikes(), memeResult.getAccordions());
+        String text = String.format("Вы поставили %s этому мему.", scoreMemeAction.getEmoji());
+        sendCallbackAnswer(callbackQuery, text);
+    }
+
+    //------- execute actions zone -------
 
     private void deleteMessage(Integer messageId, Long chatId) {
         DeleteMessage deleteMessage = DeleteMessage

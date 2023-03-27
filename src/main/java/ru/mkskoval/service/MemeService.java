@@ -2,12 +2,16 @@ package ru.mkskoval.service;
 
 import lombok.extern.slf4j.Slf4j;
 import ru.mkskoval.dto.MemeResult;
+import ru.mkskoval.dto.TopMemePositionDto;
 import ru.mkskoval.entity.Meme;
 import ru.mkskoval.entity.MemeScore;
 import ru.mkskoval.enums.ScoreMemeAction;
 import ru.mkskoval.exceptions.MemeScoreActionRepeatException;
 import ru.mkskoval.exceptions.UserLikedOwnMemeException;
 import ru.mkskoval.repository.MemeRepository;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Slf4j
 public class MemeService {
@@ -67,6 +71,10 @@ public class MemeService {
         return memeResult;
     }
 
-
+    public List<TopMemePositionDto> topMemes(LocalDate since) {
+        List<TopMemePositionDto> topMemePositionDtos = memeRepository.topMeme(since);
+        topMemePositionDtos.forEach(TopMemePositionDto::computeScore);
+        return topMemePositionDtos;
+    }
 
 }

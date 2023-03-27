@@ -10,6 +10,10 @@ public class RequestUtil {
             return RequestType.MEME_SENT;
         }
 
+        if (update.hasMessage() && update.getMessage().isCommand()) {
+            return RequestType.BOT_COMMAND;
+        }
+
         if (update.hasCallbackQuery()) {
             return RequestType.MEME_SCORE;
         }

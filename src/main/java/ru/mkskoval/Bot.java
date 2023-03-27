@@ -3,12 +3,16 @@ package ru.mkskoval;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.*;
+import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.mkskoval.dto.MemeResult;
+import ru.mkskoval.dto.TopMemePositionDto;
 import ru.mkskoval.entity.Meme;
 import ru.mkskoval.enums.RequestType;
 import ru.mkskoval.enums.ScoreMemeAction;
@@ -43,6 +47,7 @@ public class Bot extends TelegramLongPollingBot {
         switch (requestType) {
             case MEME_SENT -> memeWasSent(update.getMessage());
             case MEME_SCORE -> memeScore(update.getCallbackQuery());
+            case BOT_COMMAND -> botCommand(update.getMessage());
             case UNKNOWN -> {}
         }
     }
@@ -88,7 +93,53 @@ public class Bot extends TelegramLongPollingBot {
         sendCallbackAnswer(callbackQuery, text);
     }
 
+    private void botCommand(Message message) {
+        StringBuilder sb = new StringBuilder();
+
+        LocalDate since;
+        if (message.getText().equals("top_memes_day")) {
+            since = LocalDate.now().minusDays(1);
+        } else {
+            since = LocalDate.now().minusDays(7);
+        }
+
+        int place = 0;
+        for (TopMemePositionDto topMeme: memeService.topMemes(since)) {
+            User user = getChatMember(message.getChatId(), topMeme.getUserId());
+            String text = String.format("%d. [От %s](https://t.me/c/%s/%s) очков: %d\n",
+                    ++place, user.getFirstName(),
+                    message.getChatId().toString().substring(4), //weird
+                    topMeme.getMessageId(), topMeme.getScore());
+            sb.append(text);
+        }
+
+        sendMessage(message.getChatId(), sb.toString());
+    }
+
     //------- execute actions zone -------
+
+    private User getChatMember(Long chatId, Long userId) {
+        GetChatMember getChatMember = GetChatMember.builder().chatId(chatId).userId(userId).build();
+
+        try {
+            return execute(getChatMember).getUser();
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void sendMessage(Long chatId, String text) {
+        SendMessage sendMessage = SendMessage.builder()
+                .chatId(chatId)
+                .parseMode("Markdown")
+                .text(text).build();
+
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private void deleteMessage(Integer messageId, Long chatId) {
         DeleteMessage deleteMessage = DeleteMessage
@@ -105,8 +156,8 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     private Message sendMeme(Chat chat, User from, String fileId) {
-        String caption = String.format("[От %s %s](tg://user?id=%d)",
-                from.getFirstName(), from.getLastName(), from.getId());
+        String caption = String.format("[От %s](tg://user?id=%d)",
+                from.getFirstName(), from.getId());
 
         SendPhoto msg = SendPhoto.builder()
                 .chatId(chat.getId())

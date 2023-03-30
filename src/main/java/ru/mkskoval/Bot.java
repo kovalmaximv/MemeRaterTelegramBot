@@ -9,7 +9,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.*;
-import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.mkskoval.dto.MemeResult;
 import ru.mkskoval.dto.TopMemePositionDto;
@@ -30,8 +29,7 @@ public class Bot extends TelegramLongPollingBot {
     private final MemeService memeService;
 
     public Bot() {
-        super("5829529159:AAFT3H64I6UhLNrHB6P__IGFLD11mazr4No"); // this token was revoked :)
-        // super(System.getenv("botToken"));
+        super(System.getenv("BOT_TOKEN"));
         memeService = new MemeService();
     }
 

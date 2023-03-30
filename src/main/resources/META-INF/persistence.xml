@@ -10,8 +10,8 @@
 
         <properties>
             <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5432/meme_rates_db" />
-            <property name="javax.persistence.jdbc.user" value="meme_rater_usr" />
-            <property name="javax.persistence.jdbc.password" value="mmrusr1984!" />
+            <property name="javax.persistence.jdbc.user" value="${HIBERNATE_USERNAME}" />
+            <property name="javax.persistence.jdbc.password" value="${HIBERNATE_PASSWORD}" />
             <property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver" />
 
             <property name="hibernate.show_sql" value="true" />

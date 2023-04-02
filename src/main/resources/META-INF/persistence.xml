@@ -14,7 +14,7 @@
             <property name="javax.persistence.jdbc.password" value="${HIBERNATE_PASSWORD}" />
             <property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver" />
 
-            <property name="hibernate.show_sql" value="true" />
+            <property name="hibernate.show_sql" value="false" />
             <property name="hibernate.format_sql" value="true" />
             <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect" />
             <property name="hibernate.hbm2ddl.auto" value="validate" />

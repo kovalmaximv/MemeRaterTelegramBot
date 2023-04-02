@@ -1,20 +1,18 @@
 package ru.mkskoval.repository;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import ru.mkskoval.dto.TopMemePositionDto;
 import ru.mkskoval.entity.Meme;
 import ru.mkskoval.entity.MemeScore;
-import ru.mkskoval.enums.ScoreMemeAction;
 
-import javax.persistence.*;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.NoResultException;
+import javax.persistence.Persistence;
 import java.time.LocalDate;
 import java.util.List;
 
-@Slf4j
+@Log4j2
 public class MemeRepository {
 
     private static final EntityManagerFactory emf;

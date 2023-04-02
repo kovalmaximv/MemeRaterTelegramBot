@@ -1,6 +1,6 @@
 package ru.mkskoval.service;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import ru.mkskoval.dto.MemeResult;
 import ru.mkskoval.dto.TopMemePositionDto;
 import ru.mkskoval.entity.Meme;
@@ -13,7 +13,7 @@ import ru.mkskoval.repository.MemeRepository;
 import java.time.LocalDate;
 import java.util.List;
 
-@Slf4j
+@Log4j2
 public class MemeService {
 
     private final MemeRepository memeRepository;

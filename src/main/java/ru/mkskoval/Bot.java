@@ -1,6 +1,6 @@
 package ru.mkskoval;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
@@ -23,14 +23,15 @@ import java.time.LocalDate;
 
 import static ru.mkskoval.RequestUtil.handleUpdate;
 
-@Slf4j
+@Log4j2
 public class Bot extends TelegramLongPollingBot {
 
     private final MemeService memeService;
 
     public Bot() {
-        super(System.getenv("BOT_TOKEN"));
+        super(System.getProperty("BOT_TOKEN"));
         memeService = new MemeService();
+        log.info("BOT STARTED");
     }
 
     @Override
@@ -40,6 +41,7 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+        log.info("MESSAGE ACCEPTED {}", update);
         RequestType requestType = handleUpdate(update);
 
         switch (requestType) {

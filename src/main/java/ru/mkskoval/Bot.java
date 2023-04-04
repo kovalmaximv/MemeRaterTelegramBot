@@ -1,5 +1,6 @@
 package ru.mkskoval;
 
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
@@ -26,6 +27,9 @@ import static ru.mkskoval.RequestUtil.handleUpdate;
 @Log4j2
 public class Bot extends TelegramLongPollingBot {
 
+    public static final Long MEME_CHAT_ID = Long.valueOf(System.getProperty("MEME_CHAT_ID"));
+    public static final Long MEME_CHANNEL_ID = Long.valueOf(System.getProperty("MEME_CHANNEL_ID"));
+
     private final MemeService memeService;
 
     public Bot() {
@@ -45,10 +49,12 @@ public class Bot extends TelegramLongPollingBot {
         RequestType requestType = handleUpdate(update);
 
         switch (requestType) {
+            case WRONG_CHAT -> sendMessage(update.getMessage().getChatId(), "Отправить мем можно только из мем чата");
             case MEME_SENT -> memeWasSent(update.getMessage());
             case MEME_SCORE -> memeScore(update.getCallbackQuery());
             case BOT_COMMAND -> botCommand(update.getMessage());
-            case UNKNOWN -> {}
+            case UNKNOWN -> log.error("COMMAND UNKNOWN");
+            case CHANNEL_MESSAGE -> {}
         }
     }
 
@@ -56,15 +62,14 @@ public class Bot extends TelegramLongPollingBot {
 
     private void memeWasSent(Message message) {
         User user = message.getFrom();
-        Chat chat = message.getChat();
         String fileId  = message.getPhoto().get(0).getFileId();
 
         Meme meme = new Meme();
-        meme.setChatId(chat.getId());
+        meme.setChatId(MEME_CHANNEL_ID);
         meme.setUserId(user.getId());
         meme.setPublishDate(LocalDate.now());
 
-        Message sentMeme = sendMeme(chat, user, fileId);
+        Message sentMeme = sendMeme(user, fileId);
         meme.setMessageId(sentMeme.getMessageId());
         memeService.saveMeme(meme);
         deleteMessage(message.getMessageId(), message.getChatId());
@@ -118,29 +123,24 @@ public class Bot extends TelegramLongPollingBot {
 
     //------- execute actions zone -------
 
+    @SneakyThrows
     private User getChatMember(Long chatId, Long userId) {
         GetChatMember getChatMember = GetChatMember.builder().chatId(chatId).userId(userId).build();
 
-        try {
-            return execute(getChatMember).getUser();
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
-        }
+        return execute(getChatMember).getUser();
     }
 
+    @SneakyThrows
     private void sendMessage(Long chatId, String text) {
         SendMessage sendMessage = SendMessage.builder()
                 .chatId(chatId)
                 .parseMode("Markdown")
                 .text(text).build();
 
-        try {
-            execute(sendMessage);
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
-        }
+        execute(sendMessage);
     }
 
+    @SneakyThrows
     private void deleteMessage(Integer messageId, Long chatId) {
         DeleteMessage deleteMessage = DeleteMessage
                 .builder()
@@ -148,19 +148,21 @@ public class Bot extends TelegramLongPollingBot {
                 .chatId(chatId)
                 .build();
 
-        try {
-            execute(deleteMessage);
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
-        }
+        execute(deleteMessage);
     }
 
-    private Message sendMeme(Chat chat, User from, String fileId) {
-        String caption = String.format("[От %s](tg://user?id=%d)",
-                from.getFirstName(), from.getId());
+    private Message sendMeme(User from, String fileId) {
+        String caption;
+        if (from.getLastName() != null && !from.getLastName().isBlank()) {
+            caption = String.format("[От %s %s](tg://user?id=%d)",
+                    from.getFirstName(), from.getLastName(), from.getId());
+        } else {
+            caption = String.format("[От %s](tg://user?id=%d)",
+                    from.getFirstName(), from.getId());
+        }
 
         SendPhoto msg = SendPhoto.builder()
-                .chatId(chat.getId())
+                .chatId(MEME_CHANNEL_ID)
                 .photo(new InputFile(fileId))
                 .parseMode("Markdown")
                 .caption(caption)
@@ -174,19 +176,17 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
+    @SneakyThrows
     private void sendCallbackAnswer(CallbackQuery callbackQuery, String text) {
         AnswerCallbackQuery answerCallbackQuery = AnswerCallbackQuery.builder()
                 .callbackQueryId(callbackQuery.getId())
                 .text(text)
                 .build();
 
-        try {
-            execute(answerCallbackQuery);
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
-        }
+        execute(answerCallbackQuery);
     }
 
+    @SneakyThrows
     private void editKeyboard(Integer messageId, Long chatId, int likes, int dislikes, int accordions) {
         EditMessageReplyMarkup editMessageReplyMarkup = EditMessageReplyMarkup.builder()
                 .messageId(messageId)
@@ -194,11 +194,7 @@ public class Bot extends TelegramLongPollingBot {
                 .replyMarkup(Buttons.getScoreBar(likes, accordions, dislikes))
                 .build();
 
-        try {
-            execute(editMessageReplyMarkup);
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
-        }
+        execute(editMessageReplyMarkup);
     }
 
 }

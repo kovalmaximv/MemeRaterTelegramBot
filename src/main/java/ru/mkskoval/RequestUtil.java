@@ -16,7 +16,7 @@ public class RequestUtil {
             return RequestType.CHANNEL_MESSAGE;
         }
 
-        if (update.hasMessage() && update.getMessage().hasPhoto()) {
+        if (update.hasMessage() && (update.getMessage().hasPhoto() || update.getMessage().hasVideo())) {
             return RequestType.MEME_SENT;
         }
 

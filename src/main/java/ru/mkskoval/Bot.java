@@ -7,6 +7,7 @@ import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.*;
@@ -62,14 +63,21 @@ public class Bot extends TelegramLongPollingBot {
 
     private void memeWasSent(Message message) {
         User user = message.getFrom();
-        String fileId  = message.getPhoto().get(0).getFileId();
 
         Meme meme = new Meme();
         meme.setChatId(MEME_CHANNEL_ID);
         meme.setUserId(user.getId());
         meme.setPublishDate(LocalDate.now());
 
-        Message sentMeme = sendMeme(user, fileId);
+        Message sentMeme;
+        if (message.hasPhoto()) {
+            String fileId = message.getPhoto().get(0).getFileId();
+            sentMeme = sendMemePhoto(user, fileId);
+        } else {
+            String fileId = message.getVideo().getFileId();
+            sentMeme = sendMemeVideo(user, fileId);
+        }
+
         meme.setMessageId(sentMeme.getMessageId());
         memeService.saveMeme(meme);
         deleteMessage(message.getMessageId(), message.getChatId());
@@ -151,7 +159,32 @@ public class Bot extends TelegramLongPollingBot {
         execute(deleteMessage);
     }
 
-    private Message sendMeme(User from, String fileId) {
+    private Message sendMemeVideo(User from, String fileId) {
+        String caption;
+        if (from.getLastName() != null && !from.getLastName().isBlank()) {
+            caption = String.format("[От %s %s](tg://user?id=%d)",
+                    from.getFirstName(), from.getLastName(), from.getId());
+        } else {
+            caption = String.format("[От %s](tg://user?id=%d)",
+                    from.getFirstName(), from.getId());
+        }
+
+        SendVideo msg = SendVideo.builder()
+                .chatId(MEME_CHANNEL_ID)
+                .video(new InputFile(fileId))
+                .parseMode("Markdown")
+                .caption(caption)
+                .replyMarkup(Buttons.getScoreBar(0, 0, 0))
+                .build();
+
+        try {
+            return execute(msg);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Message sendMemePhoto(User from, String fileId) {
         String caption;
         if (from.getLastName() != null && !from.getLastName().isBlank()) {
             caption = String.format("[От %s %s](tg://user?id=%d)",

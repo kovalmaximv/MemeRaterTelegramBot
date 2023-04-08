@@ -46,16 +46,20 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        log.info("MESSAGE ACCEPTED {}", update);
-        RequestType requestType = handleUpdate(update);
+        try {
+            log.info("MESSAGE ACCEPTED {}", update);
+            RequestType requestType = handleUpdate(update);
 
-        switch (requestType) {
-            case WRONG_CHAT -> sendMessage(update.getMessage().getChatId(), "Отправить мем можно только из мем чата");
-            case MEME_SENT -> memeWasSent(update.getMessage());
-            case MEME_SCORE -> memeScore(update.getCallbackQuery());
-            case BOT_COMMAND -> botCommand(update.getMessage());
-            case UNKNOWN -> log.error("COMMAND UNKNOWN");
-            case CHANNEL_MESSAGE -> {}
+            switch (requestType) {
+                case WRONG_CHAT -> sendMessage(update.getMessage().getChatId(), "Отправить мем можно только из мем чата");
+                case MEME_SENT -> memeWasSent(update.getMessage());
+                case MEME_SCORE -> memeScore(update.getCallbackQuery());
+                case BOT_COMMAND -> botCommand(update.getMessage());
+                case UNKNOWN -> log.error("COMMAND UNKNOWN");
+                case CHANNEL_MESSAGE -> {}
+            }
+        } catch (Exception e) {
+            log.error("Error was occurred: ", e);
         }
     }
 

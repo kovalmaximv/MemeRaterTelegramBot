@@ -7,9 +7,9 @@ import ru.mkskoval.properties.BotConfiguration;
 public class RequestUtil {
 
     public static RequestType handleUpdate(Update update, BotConfiguration botConfiguration) {
-        if (update.hasMessage() && !update.getMessage().getChatId().equals(botConfiguration.getMemeChatId())) {
+        /*if (update.hasMessage() && !update.getMessage().getChatId().equals(botConfiguration.getMemeChatId())) {
             return RequestType.WRONG_CHAT;
-        }
+        }*/
 
         if (update.hasMessage() && update.getMessage().getFrom().getId().equals(777000L)) {
             return RequestType.CHANNEL_MESSAGE;

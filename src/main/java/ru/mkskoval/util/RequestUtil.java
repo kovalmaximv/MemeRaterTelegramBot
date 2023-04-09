@@ -1,14 +1,13 @@
-package ru.mkskoval;
+package ru.mkskoval.util;
 
 import org.telegram.telegrambots.meta.api.objects.Update;
 import ru.mkskoval.enums.RequestType;
-
-import static ru.mkskoval.Bot.MEME_CHAT_ID;
+import ru.mkskoval.properties.BotConfiguration;
 
 public class RequestUtil {
 
-    public static RequestType handleUpdate(Update update) {
-        if (update.hasMessage() && !update.getMessage().getChatId().equals(MEME_CHAT_ID)) {
+    public static RequestType handleUpdate(Update update, BotConfiguration botConfiguration) {
+        if (update.hasMessage() && !update.getMessage().getChatId().equals(botConfiguration.getMemeChatId())) {
             return RequestType.WRONG_CHAT;
         }
 
@@ -18,10 +17,6 @@ public class RequestUtil {
 
         if (update.hasMessage() && (update.getMessage().hasPhoto() || update.getMessage().hasVideo())) {
             return RequestType.MEME_SENT;
-        }
-
-        if (update.hasMessage() && update.getMessage().isCommand()) {
-            return RequestType.BOT_COMMAND;
         }
 
         if (update.hasCallbackQuery()) {

@@ -2,6 +2,7 @@ package ru.mkskoval;
 
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
@@ -13,30 +14,30 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageRe
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.mkskoval.dto.MemeResult;
-import ru.mkskoval.dto.TopMemePositionDto;
 import ru.mkskoval.entity.Meme;
 import ru.mkskoval.enums.RequestType;
 import ru.mkskoval.enums.ScoreMemeAction;
 import ru.mkskoval.exceptions.MemeScoreActionRepeatException;
 import ru.mkskoval.exceptions.UserLikedOwnMemeException;
+import ru.mkskoval.properties.BotConfiguration;
 import ru.mkskoval.service.MemeService;
+import ru.mkskoval.util.Buttons;
 
 import java.time.LocalDate;
 
-import static ru.mkskoval.RequestUtil.handleUpdate;
+import static ru.mkskoval.util.RequestUtil.handleUpdate;
 
 @Log4j2
+@Service
 public class Bot extends TelegramLongPollingBot {
 
-    public static final Long MEME_CHAT_ID = Long.valueOf(System.getProperty("MEME_CHAT_ID"));
-    public static final Long MEME_CHANNEL_ID = Long.valueOf(System.getProperty("MEME_CHANNEL_ID"));
-
     private final MemeService memeService;
+    private final BotConfiguration botConfiguration;
 
-    public Bot() {
-        super(System.getProperty("BOT_TOKEN"));
-        memeService = new MemeService();
-        log.info("BOT STARTED");
+    public Bot(MemeService memeService, BotConfiguration botConfiguration) {
+        super(botConfiguration.getToken());
+        this.memeService = memeService;
+        this.botConfiguration = botConfiguration;
     }
 
     @Override
@@ -48,13 +49,12 @@ public class Bot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         try {
             log.info("MESSAGE ACCEPTED {}", update);
-            RequestType requestType = handleUpdate(update);
+            RequestType requestType = handleUpdate(update, botConfiguration);
 
             switch (requestType) {
                 case WRONG_CHAT -> sendMessage(update.getMessage().getChatId(), "Отправить мем можно только из мем чата");
                 case MEME_SENT -> memeWasSent(update.getMessage());
                 case MEME_SCORE -> memeScore(update.getCallbackQuery());
-                case BOT_COMMAND -> botCommand(update.getMessage());
                 case UNKNOWN -> log.error("COMMAND UNKNOWN");
                 case CHANNEL_MESSAGE -> {}
             }
@@ -69,7 +69,7 @@ public class Bot extends TelegramLongPollingBot {
         User user = message.getFrom();
 
         Meme meme = new Meme();
-        meme.setChatId(MEME_CHANNEL_ID);
+        meme.setChatId(botConfiguration.getMemeChannelId());
         meme.setUserId(user.getId());
         meme.setPublishDate(LocalDate.now());
 
@@ -108,29 +108,6 @@ public class Bot extends TelegramLongPollingBot {
                 memeResult.getLikes(), memeResult.getDislikes(), memeResult.getAccordions());
         String text = String.format("Вы поставили %s этому мему.", scoreMemeAction.getEmoji());
         sendCallbackAnswer(callbackQuery, text);
-    }
-
-    private void botCommand(Message message) {
-        StringBuilder sb = new StringBuilder();
-
-        LocalDate since;
-        if (message.getText().equals("top_memes_day")) {
-            since = LocalDate.now().minusDays(1);
-        } else {
-            since = LocalDate.now().minusDays(7);
-        }
-
-        int place = 0;
-        for (TopMemePositionDto topMeme: memeService.topMemes(since)) {
-            User user = getChatMember(message.getChatId(), topMeme.getUserId());
-            String text = String.format("%d. [От %s](https://t.me/c/%s/%s) очков: %d\n",
-                    ++place, user.getFirstName(),
-                    message.getChatId().toString().substring(4), //weird
-                    topMeme.getMessageId(), topMeme.getScore());
-            sb.append(text);
-        }
-
-        sendMessage(message.getChatId(), sb.toString());
     }
 
     //------- execute actions zone -------
@@ -174,7 +151,7 @@ public class Bot extends TelegramLongPollingBot {
         }
 
         SendVideo msg = SendVideo.builder()
-                .chatId(MEME_CHANNEL_ID)
+                .chatId(botConfiguration.getMemeChannelId())
                 .video(new InputFile(fileId))
                 .parseMode("Markdown")
                 .caption(caption)
@@ -199,7 +176,7 @@ public class Bot extends TelegramLongPollingBot {
         }
 
         SendPhoto msg = SendPhoto.builder()
-                .chatId(MEME_CHANNEL_ID)
+                .chatId(botConfiguration.getMemeChannelId())
                 .photo(new InputFile(fileId))
                 .parseMode("Markdown")
                 .caption(caption)

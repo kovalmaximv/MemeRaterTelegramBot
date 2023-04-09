@@ -1,8 +1,8 @@
 package ru.mkskoval.dto;
 
+import jakarta.persistence.Transient;
 import lombok.Data;
 
-import javax.persistence.Transient;
 
 @Data
 public class TopMemePositionDto {

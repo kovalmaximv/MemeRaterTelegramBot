@@ -1,9 +1,8 @@
 package ru.mkskoval.entity;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import lombok.Data;
 
-import java.io.Serial;
 import java.time.LocalDate;
 
 @Entity

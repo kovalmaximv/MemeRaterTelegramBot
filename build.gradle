@@ -29,20 +29,6 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
 }
 
-jar {
-    archiveName = 'MemeRaterBot.jar'
-
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    manifest {
-        attributes 'Main-Class': 'ru.mkskoval.Main',
-                'Class-Path': configurations.runtimeClasspath.files.collect { "lib/$it.name" }.join(' '),
-                'Implementation-Version': project.version
-    }
-
-    from(configurations.runtimeClasspath.files.collect { it.isDirectory() ? it : zipTree(it) }) {}
-}
-
 test {
     useJUnitPlatform()
 }

@@ -1,23 +1,7 @@
 <Configuration status="INFO">
-    <Appenders>
-        <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
-        </Console>
-        <RollingFile
-                name="DailyRoll" fileName="all.log"
-                filePattern="%d{dd} - all-%i.log"
-                immediateFlush="true" append="true">
-            <PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-            <Policies>
-                <CronTriggeringPolicy schedule="0 0 0 * * ?" />
-                <SizeBasedTriggeringPolicy size="250 MB" />
-            </Policies>
-        </RollingFile>
-    </Appenders>
     <Loggers>
         <Root level="INFO">
             <AppenderRef ref="Console" />
-            <AppenderRef ref="DailyRoll"/>
         </Root>
     </Loggers>
 </Configuration>
